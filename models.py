@@ -15,7 +15,7 @@ def inject_lora(model, lora_rank, vision_lora=None, llm_lora=None, lora_mm_proje
     cfg = peft.LoraConfig(
         r = lora_rank,
         lora_dropout=0.05,
-        lora_alpha=lora_rank * 2,
+        use_rslora = True,
         target_modules = tgt_modules,
     )
 
