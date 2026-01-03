@@ -13,7 +13,7 @@ import shutil
 from models import inject_lora
 from data import build_dataset
 import json
-from utils import print_trainable_parameters, configure_logger
+from utils import print_trainable_parameters, configure_logger,backup_code
 from callback import LoggingCallback
 def get_eval_dataloader(self, eval_dataset=None):
     
@@ -32,7 +32,8 @@ out_dir = Path(f"working_dir/{time.strftime('%Y%m%d_%H%M%S')}")
 out_dir.mkdir(parents=True, exist_ok=True)
 # 保存代码文件
 cur_dir = Path(__file__).parent
-shutil.copytree(cur_dir, out_dir / "code")
+
+backup_code(out_dir / "code")
 
 logger = configure_logger(out_dir)
 # 打印GPU信息
@@ -74,7 +75,7 @@ training_args = SFTConfig(
     eval_strategy = "steps",
     optim="adamw_torch_fused",
     learning_rate=training_args.lr,  
-    weight_decay=0.01,
+    weight_decay=0.001,
     lr_scheduler_type="cosine",  
     logging_steps=5,
     warmup_ratio=0.1,
@@ -119,7 +120,7 @@ trainer = SFTTrainer(
 )
 
 # remove PrinterCallback
-trainer.callback_handler.remove_callback(PrinterCallback)
+trainer.remove_callback(PrinterCallback)
 trainer.get_eval_dataloader = get_eval_dataloader.__get__(trainer)
 trainer.train()
 

@@ -2,6 +2,8 @@ from transformers.utils.logging import get_logger
 import torch
 import logging
 import sys
+import shutil
+from pathlib import Path
 from logging import FileHandler,StreamHandler
 def read_gpu_info():
     gpu_info = {}
@@ -50,3 +52,10 @@ def configure_logger(out_dir):
     logger.addHandler(console_hanler)
     logger.propagate = False
     return logger
+
+def backup_code(tgt_dir):
+    tgt_dir.mkdir(parents=True, exist_ok=True)
+    base_dir = Path(__file__).parent
+    for item in base_dir.iterdir():
+        if item.name.endswith('.py',) or item.name.endswith('.sh'):
+            shutil.copy(item, tgt_dir / item.name)
