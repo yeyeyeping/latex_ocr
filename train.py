@@ -10,7 +10,7 @@ from utils import read_gpu_info
 from args import parse_args
 from data import get_collate_fn
 import shutil
-from models import inject_lora
+from models import inject_lora,length_balaced_ce
 from data import build_dataset
 import json
 from utils import print_trainable_parameters, configure_logger,backup_code
@@ -51,7 +51,7 @@ try:
     logger.info("using flash_attention_2")
 except:
     model = InternVLForConditionalGeneration.from_pretrained(model_args.model_path, device_map="auto",dtype=torch.bfloat16)
-
+model.loss_function = length_balaced_ce
 model = inject_lora(model,
             model_args.lora_rank, 
             model_args.tgt_module_in_vision,
@@ -89,9 +89,9 @@ training_args = SFTConfig(
     save_only_model=True,
     save_total_limit = 3, 
     
-    # dataloader_num_workers = 16,
-    # dataloader_persistent_workers = True,
-    # dataloader_prefetch_factor = 2,
+    dataloader_num_workers = 16,
+    dataloader_persistent_workers = True,
+    dataloader_prefetch_factor = 2,
     
     bf16=True,
     torch_compile=True,
