@@ -69,7 +69,8 @@ training_args = SFTConfig(
     per_device_train_batch_size=training_args.batch_size,  
     
     gradient_accumulation_steps=training_args.gradient_accumulation_steps,  
-    eval_accumulation_steps=training_args.gradient_accumulation_steps,
+    per_device_eval_batch_size=training_args.batch_size ,
+    eval_accumulation_steps=training_args.gradient_accumulation_steps * 2,
     gradient_checkpointing=True,  
     
     eval_strategy = "steps",
@@ -88,9 +89,9 @@ training_args = SFTConfig(
     save_only_model=True,
     save_total_limit = 3, 
     
-    dataloader_num_workers = 16,
-    dataloader_persistent_workers = True,
-    dataloader_prefetch_factor = 2,
+    # dataloader_num_workers = 16,
+    # dataloader_persistent_workers = True,
+    # dataloader_prefetch_factor = 2,
     
     bf16=True,
     torch_compile=True,
@@ -100,11 +101,12 @@ training_args = SFTConfig(
     gradient_checkpointing_kwargs={"use_reentrant": False},   
 )
 
+MEAN = [int(i * 255) for i in processor.image_processor.image_mean]
 train_transform = Compose(
      [
         RandomApply([GaussianBlur((3,3))]),
-        RandomApply([RandomPerspective(distortion_scale=0.4,p=1,fill=processor.image_processor.image_mean),
-                     RandomRotation(degrees=(-10, 10), fill=processor.image_processor.image_mean)]),
+        RandomApply([RandomPerspective(distortion_scale=0.25, p=1,fill=MEAN),
+                     RandomRotation(degrees=(-7, 7), fill=MEAN)]),
         RandomApply([ColorJitter(brightness=0.5, contrast=0.5)]),
      ])
 
@@ -118,10 +120,10 @@ trainer = SFTTrainer(
     processing_class=processor,
     callbacks=[EarlyStoppingCallback(early_stopping_patience=5), LoggingCallback(logger)]
 )
-
 # remove PrinterCallback
 trainer.remove_callback(PrinterCallback)
 trainer.get_eval_dataloader = get_eval_dataloader.__get__(trainer)
+
 trainer.train()
 
 

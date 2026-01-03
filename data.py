@@ -2,25 +2,26 @@ from PIL import Image
 from datasets import load_dataset
 import io
 import torch
+from utils import bounded_resize
 from transformers import InternVLProcessor
-def format_message(example, prompt, tgt_image_size):
+def format_message(example, prompt):
     answer = example['text']
-    image =  Image.open(io.BytesIO(example['image'])).convert("RGB").resize((tgt_image_size, tgt_image_size))
+    image =  Image.open(io.BytesIO(example['image'])).convert("RGB")
     return {
             "messages":[
                 {
                     "role": "user", 
                     "content": 
                         [
+                            {"type":"image"},
                             {"type":"text","text": prompt},
-                            {"type":"image"}
                         ]
                 },
-                {
-                    "role": "assistant", 
-                    "content": 
+                    {
+                        "role": "assistant", 
+                        "content": 
                         [
-                                {"type":"text","text": answer}
+                            {"type":"text","text": answer}
                         ]
                     }
               ],
@@ -31,17 +32,19 @@ def format_message(example, prompt, tgt_image_size):
 def build_dataset(args):
     dataset = load_dataset(args.data_folder)
     train_dataset,val_dataset = dataset['train'],dataset['validation']
-    train_dataset = train_dataset.map(lambda x: format_message(x, args.prompt, args.tgt_image_size), num_proc=8)
-    val_dataset = val_dataset.map(lambda x: format_message(x,  args.prompt, args.tgt_image_size), num_proc=8)
+    train_dataset = train_dataset.map(lambda x: format_message(x, args.prompt), num_proc=4)
+    val_dataset = val_dataset.map(lambda x: format_message(x,  args.prompt),num_proc=4)
     return train_dataset, val_dataset
 
 def get_collate_fn(processor:InternVLProcessor, train_transform=None, assistant_token_id=77091):
     
     def collate_fn(examples):
         images, texts = zip(*[(example["images"][0], example['messages']) for example in examples])
-        if train_transform:
-            images = [train_transform(x) for x in images]
-        
+        images = list(images)
+        for i in range(len(images)):
+            images[i] = bounded_resize(images[i])
+            if train_transform:
+                images[i] = train_transform(images[i])
         texts = processor.apply_chat_template(texts, tokenize=False)
         batch = processor(text=texts, 
                           images=list(images), 
@@ -64,7 +67,6 @@ def get_collate_fn(processor:InternVLProcessor, train_transform=None, assistant_
         assistant_tokens_mask = pos.bool()
         
         labels[(~assistant_tokens_mask) | (~attention_mask.bool())] = -100
-        
         return {
             "input_ids": batch["input_ids"],
             "pixel_values": batch["pixel_values"],

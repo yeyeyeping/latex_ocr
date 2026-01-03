@@ -5,6 +5,7 @@ import sys
 import shutil
 from pathlib import Path
 from logging import FileHandler,StreamHandler
+from PIL import Image
 def read_gpu_info():
     gpu_info = {}
     gpu_info['cuda_available'] = torch.cuda.is_available()
@@ -59,3 +60,15 @@ def backup_code(tgt_dir):
     for item in base_dir.iterdir():
         if item.name.endswith('.py',) or item.name.endswith('.sh'):
             shutil.copy(item, tgt_dir / item.name)
+
+
+def bounded_resize(image, max_width = 1500, max_height = 448):    
+    width, height = image.size
+    if width <= max_width and height <= max_height:
+        return image
+    
+    max_ratio = max(width / max_width, height / max_height)
+    new_width = int(width / max_ratio)
+    new_height = int(height / max_ratio)
+    
+    return image.resize((new_width, new_height))
