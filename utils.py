@@ -62,7 +62,7 @@ def backup_code(tgt_dir):
             shutil.copy(item, tgt_dir / item.name)
 
 
-def bounded_resize(image, max_width = 1500, max_height = 448):    
+def bounded_resize(image, max_width = 1120, max_height = 448):    
     width, height = image.size
     if width <= max_width and height <= max_height:
         return image

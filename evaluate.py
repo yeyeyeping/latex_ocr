@@ -27,7 +27,7 @@ def pil_image2_bytes(image:Image.Image)->bytes:
 
 prompt = sys.argv[1]    
 
-
+print(sys.argv)
 
 valid_image_path = Path("/root/project/hf/datasets/train/val_images")
 out_latex_dir = Path("predictions")

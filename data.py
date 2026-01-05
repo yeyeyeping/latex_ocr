@@ -32,8 +32,12 @@ def format_message(example, prompt):
 def build_dataset(args):
     dataset = load_dataset(args.data_folder)
     train_dataset,val_dataset = dataset['train'],dataset['validation']
-    train_dataset = train_dataset.map(lambda x: format_message(x, args.prompt), num_proc=4)
-    val_dataset = val_dataset.map(lambda x: format_message(x,  args.prompt),num_proc=4)
+    train_dataset = train_dataset.map(lambda x: format_message(x, args.prompt), 
+                                      num_proc=4, 
+                                      load_from_cache_file=False)
+    val_dataset = val_dataset.map(lambda x: format_message(x,  args.prompt),
+                                  num_proc=4, 
+                                  load_from_cache_file=False)
     return train_dataset, val_dataset
 
 def get_collate_fn(processor:InternVLProcessor, train_transform=None, assistant_token_id=77091):
@@ -42,7 +46,7 @@ def get_collate_fn(processor:InternVLProcessor, train_transform=None, assistant_
         images, texts = zip(*[(example["images"][0], example['messages']) for example in examples])
         images = list(images)
         for i in range(len(images)):
-            images[i] = bounded_resize(images[i])
+            # images[i] = bounded_resize(images[i])
             if train_transform:
                 images[i] = train_transform(images[i])
         texts = processor.apply_chat_template(texts, tokenize=False)
@@ -65,7 +69,6 @@ def get_collate_fn(processor:InternVLProcessor, train_transform=None, assistant_
         pos[pos <= y.unsqueeze(1)] = False
         pos[pos > y.unsqueeze(1)] = True
         assistant_tokens_mask = pos.bool()
-        
         labels[(~assistant_tokens_mask) | (~attention_mask.bool())] = -100
         return {
             "input_ids": batch["input_ids"],
