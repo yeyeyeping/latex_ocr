@@ -1,6 +1,11 @@
+import evaluate
 from torch import nn
 import peft
 import torch
+import numpy as np
+import os
+
+os.environ['HF_ENDPOINT'] = "https://hf-mirror.com"
 def inject_lora(model, lora_rank, vision_lora=None, llm_lora=None, lora_mm_project=False, lm_head=False):
     tgt_modules = ""
     if llm_lora and llm_lora != "":
@@ -55,3 +60,33 @@ def length_balaced_ce(
     return (loss * txt_length).sum()
 
 
+def preprocess_logits_for_metrics(logits, labels=None):
+    """Collapse logits to token ids so eval does not cache full vocab tensors."""
+    if isinstance(logits, tuple):
+        logits = logits[0]
+    return torch.argmax(logits, dim=-1)
+
+
+def get_blue_metrics(tokenizer):
+    bleu = evaluate.load("bleu")
+
+    def inner_metrics_compute(eval_preds):
+        preds, labels = eval_preds.predictions, eval_preds.label_ids
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        preds_flat = np.asarray(preds)
+        labels_flat = np.asarray(labels)
+        decoded_preds, decoded_labels = [], []
+        for p, g in zip(preds_flat, labels_flat):
+            mask = g != -100
+            valid_pred = p[mask]
+            valid_gt = g[mask]
+            decoded_preds.append(tokenizer.decode(valid_pred, skip_special_tokens=True))
+            decoded_labels.append(tokenizer.decode(valid_gt, skip_special_tokens=True))
+        
+        bleu_result = bleu.compute(predictions=decoded_preds, references=decoded_labels)
+        return {
+            "eval_bleu": bleu_result["bleu"],
+        }
+
+    return inner_metrics_compute

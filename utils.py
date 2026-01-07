@@ -33,6 +33,7 @@ def print_trainable_parameters(model):
     logger.info(f"trainable params: {trainable_params:,} || all params: {all_param:,} || trainable%: {100 * trainable_params / all_param:.2f}%")
     
 
+
 def configure_logger(out_dir):
     logger = logging.getLogger("__main__")
     logger.setLevel(logging.INFO)

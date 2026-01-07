@@ -3,9 +3,9 @@ from transformers import HfArgumentParser
 from typing import Tuple
 @dataclass
 class TrainingArguments:
-    lr: float = 1e-4
-    epoch: int = 10
-    batch_size: int = 4
+    lr: float = 2e-4
+    epoch: int = 5
+    batch_size: int = 3
     gradient_accumulation_steps: int = 16
     seed: int=43
     

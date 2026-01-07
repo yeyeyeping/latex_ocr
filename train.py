@@ -9,8 +9,7 @@ from torchvision.transforms import (GaussianBlur, ColorJitter, RandomRotation, C
 from utils import read_gpu_info
 from args import parse_args
 from data import get_collate_fn
-import shutil
-from models import inject_lora,length_balaced_ce
+from models import inject_lora,length_balaced_ce, get_blue_metrics, preprocess_logits_for_metrics
 from data import build_dataset
 import json
 from utils import print_trainable_parameters, configure_logger,backup_code
@@ -45,6 +44,7 @@ logger.info(json.dumps({
     }, ensure_ascii=False))
 # 初始化模型
 processor = InternVLProcessor.from_pretrained(model_args.model_path)
+
 try:
     model = InternVLForConditionalGeneration.from_pretrained(model_args.model_path, attn_implementation="flash_attention_2",dtype=torch.bfloat16)
     logger.info("using flash_attention_2")
@@ -68,8 +68,8 @@ training_args = SFTConfig(
     per_device_train_batch_size=training_args.batch_size,  
     gradient_accumulation_steps=training_args.gradient_accumulation_steps,  
     
-    per_device_eval_batch_size=2 ,
-    eval_accumulation_steps=training_args.gradient_accumulation_steps,
+    per_device_eval_batch_size=2,
+    eval_accumulation_steps=2,
     gradient_checkpointing=True,  
     
     eval_strategy = "steps",
@@ -81,7 +81,7 @@ training_args = SFTConfig(
     warmup_ratio=0.1,
     
     eval_steps = 10,
-    metric_for_best_model="eval_mean_token_accuracy",
+    metric_for_best_model="eval_bleu",
     greater_is_better=True,
     
     torch_empty_cache_steps = 10,
@@ -118,6 +118,8 @@ trainer = SFTTrainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
+    compute_metrics=get_blue_metrics(processor.tokenizer),
+    preprocess_logits_for_metrics=preprocess_logits_for_metrics,
     processing_class=processor,
     callbacks=[EarlyStoppingCallback(early_stopping_patience=15), LoggingCallback(logger)]
 )
@@ -126,6 +128,4 @@ trainer.remove_callback(PrinterCallback)
 trainer.get_eval_dataloader = get_eval_dataloader.__get__(trainer)
 
 trainer.train()
-
-
 trainer.save_model(out_dir/"latest")
