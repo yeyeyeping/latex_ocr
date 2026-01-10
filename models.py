@@ -16,8 +16,11 @@ def inject_lora(model, lora_rank, vision_lora=None, llm_lora=None, lora_mm_proje
     
     if lora_mm_project:
         tgt_modules += r"|(model\.multi_modal_projector\.linear_[12])"
+        tgt_modules += r"|(model\.multi_modal_projector\.linear_[13])"
+    
     if lm_head:
         tgt_modules += r"|(lm_head)"
+    
     cfg = peft.LoraConfig(
         r = lora_rank,
         lora_dropout=0.05,

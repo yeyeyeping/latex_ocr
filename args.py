@@ -5,22 +5,22 @@ from typing import Tuple
 class TrainingArguments:
     lr: float = 2e-4
     epoch: int = 5
-    batch_size: int = 3
-    gradient_accumulation_steps: int = 16
+    batch_size: int = 1
+    gradient_accumulation_steps: int = 64
     seed: int=43
     
 @dataclass
 class ModelArgument:
     model_path:str = "/root/project/hf/models/InternVL3_5-HF"
-    lora_rank: int = 32
-    tgt_module_in_vision:str = None
+    lora_rank: int = 64
+    tgt_module_in_vision: str = "(q_proj|k_proj|v_proj|projection_layer|fc1|fc2)"
     tgt_module_in_llm:str = "(q_proj|k_proj|v_proj|o_proj|down_proj|up_proj)"
     lm_head:bool = True
     mm_projector:bool = False
 
 @dataclass
 class DataArgument:
-    data_folder = "/root/project/latex_ocr-main/data/data/intern_resized"
+    data_folder = "/root/project/latex_ocr-main/data/data/intern"
     prompt: str = """请从输入的图像中还原LaTeX 代码,保证输出的latex代码语法正确："""
 
 def parse_args()->Tuple[TrainingArguments,ModelArgument,DataArgument]:

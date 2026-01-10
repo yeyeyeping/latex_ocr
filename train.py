@@ -75,7 +75,7 @@ training_args = SFTConfig(
     eval_strategy = "steps",
     optim="adamw_torch_fused",
     learning_rate=training_args.lr,  
-    weight_decay=0.001,
+    weight_decay=0.05,
     lr_scheduler_type="cosine",  
     logging_steps=5,
     warmup_ratio=0.1,
@@ -95,7 +95,7 @@ training_args = SFTConfig(
     dataloader_prefetch_factor = 2,
     
     bf16=True,
-    torch_compile=True,
+    # torch_compile=True,
     report_to="tensorboard",
     max_grad_norm=1,
     gradient_checkpointing_kwargs={"use_reentrant": False},   
