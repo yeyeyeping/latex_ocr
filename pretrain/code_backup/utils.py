@@ -1,3 +1,4 @@
+from tensorboardX import SummaryWriter
 from transformers.utils.logging import get_logger
 import torch
 import logging
@@ -5,7 +6,19 @@ import sys
 import shutil
 from pathlib import Path
 from logging import FileHandler,StreamHandler
-from PIL import Image
+def set_tf32():
+    if torch.cuda.is_available():
+        torch.set_float32_matmul_precision('high')
+        torch.backends.cudnn.allow_tf32 = True
+
+def save_model(model, save_path, processor):
+    save_path.mkdir(parents=True, exist_ok=True)
+    if hasattr(model, "module"):
+        model.module.save_pretrained(save_path)
+    else:
+        model.save_pretrained(save_path)
+    processor.save_pretrained(save_path)
+
 def read_gpu_info():
     gpu_info = {}
     gpu_info['cuda_available'] = torch.cuda.is_available()
@@ -33,7 +46,21 @@ def print_trainable_parameters(model):
     logger.info(f"trainable params: {trainable_params:,} || all params: {all_param:,} || trainable%: {100 * trainable_params / all_param:.2f}%")
     
 
-
+def manual_seed(seed):
+    """Set manual seed for reproducibility."""
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    # no one care about cudnn deterministic, set to False for better performance
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.benchmark = True
+    
+def configure_tensorboard(out_dir):
+    tb_writer = SummaryWriter(logdir=out_dir)
+    return tb_writer
 def configure_logger(out_dir):
     logger = logging.getLogger("__main__")
     logger.setLevel(logging.INFO)
@@ -62,14 +89,3 @@ def backup_code(tgt_dir):
         if item.name.endswith('.py',) or item.name.endswith('.sh'):
             shutil.copy(item, tgt_dir / item.name)
 
-
-def bounded_resize(image, max_width = 1120, max_height = 448):    
-    width, height = image.size
-    if width <= max_width and height <= max_height:
-        return image
-    
-    max_ratio = max(width / max_width, height / max_height)
-    new_width = int(width / max_ratio)
-    new_height = int(height / max_ratio)
-    
-    return image.resize((new_width, new_height))
